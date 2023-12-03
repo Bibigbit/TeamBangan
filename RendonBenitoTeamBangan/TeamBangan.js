@@ -4,7 +4,7 @@ let flippedCards = [];
 let wrongGuesses = 0;
 let timer;
 let time = 0;
-const maxWrongGuesses = 10;
+let winCount = 0;
 
 function shuffle(array) {
   return array.sort(() => Math.random() - 0.5);
@@ -76,13 +76,20 @@ function checkMatch() {
   }
 }
 
-function resetGame() {
+function resetGame(difficultySettings) {
   flippedCards = [];
-  shuffledNumbers = shuffle(numbers);
+  shuffledNumbers = shuffle(Array.from({ length: difficultySettings.pairs }, (_, index) => index + 1));
+  shuffledNumbers = shuffle([...shuffledNumbers, ...shuffledNumbers]);
+
   time = 0;
   wrongGuesses = 0;
+  maxWrongGuesses = difficultySettings.maxWrongGuesses;
+
   updateGameInfo();
   updateWrongGuesses();
+
+  stopTimer();
+  startTimer();
 
   const gameBoard = document.getElementById('game-board');
   gameBoard.innerHTML = '';
@@ -92,9 +99,9 @@ function resetGame() {
     gameBoard.appendChild(card);
   }
 
-  startTimer();
   hideAllPopups();
 }
+
 
 function startGame() {
   document.getElementById('start-page').style.display = 'none';
@@ -107,6 +114,7 @@ function startTimer() {
   timer = setInterval(function () {
     time++;
     updateGameInfo();
+    
   }, 1000);
 }
 
@@ -124,6 +132,14 @@ function showWinPopup() {
   winPopup.classList.add('show');
   document.getElementById('win-popup-time').textContent = `Time: ${time}s`;
   document.getElementById('win-popup-wrong-guesses').textContent = `Wrong Guesses: ${wrongGuesses}`;
+  winCount++;
+  if (winCount >= 2) {
+    winCount = 0;
+    setTimeout(function () {
+      hideWinPopup();
+      setTimeout(resetGame, 300);
+    }, 3000);
+  }
 }
 
 function hideWinPopup() {
@@ -173,8 +189,59 @@ function hidePopup(popupId) {
   const popup = document.getElementById(popupId);
   popup.style.display = 'none';
 }
+const difficultyLevels = {
+  novice: { gridSize: 4, pairs: 4, maxWrongGuesses: 9, timeLimit: 60 },
+  intermediate: { gridSize: 5, pairs: 6, maxWrongGuesses: 7, timeLimit: 50 },
+  expert: { gridSize: 8, pairs: 6, maxWrongGuesses: 5, timeLimit: 40 },
+};
 
 
 document.getElementById('game-over-popup').addEventListener('click', hideGameOverPopup);
 
-resetGame();
+resetGame(difficultyLevels.novice);
+
+function startGame(difficulty) {
+  const difficultySettings = difficultyLevels[difficulty];
+  document.getElementById('start-page').style.display = 'none';
+  document.getElementById('game-page').style.display = 'flex';
+  hideWinPopup();
+  resetGame(difficultySettings);
+}
+
+function resetNoviceGame() {
+  resetGame(difficultyLevels.novice);
+}
+
+function resetIntermediateGame() {
+  resetGame(difficultyLevels.intermediate);
+}
+
+function resetExpertGame() {
+  resetGame(difficultyLevels.expert);
+}
+
+function resetGame(difficultySettings) {
+  flippedCards = [];
+  shuffledNumbers = shuffle(Array.from({ length: difficultySettings.pairs }, (_, index) => index + 1).flatMap(number => [number, number]));
+
+  time = 0;
+  wrongGuesses = 0;
+  maxWrongGuesses = difficultySettings.maxWrongGuesses;
+
+  updateGameInfo();
+  updateWrongGuesses();
+
+  stopTimer();
+  startTimer();
+
+  const gameBoard = document.getElementById('game-board');
+  gameBoard.innerHTML = '';
+
+  shuffledNumbers.forEach((number, index) => {
+    const card = createCard(number, index);
+    gameBoard.appendChild(card);
+  });
+  
+  winCount = 0;
+  hideAllPopups();
+}
